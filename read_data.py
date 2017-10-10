@@ -2,7 +2,7 @@ import numpy as np
 import scipy.io as scio
 import matplotlib.pyplot as plt
 
-data=scio.loadmat('PA2-cluster-data/cluster_data.mat')
+data=scio.loadmat('cluster_data.mat')
 A_X=data['dataA_X']
 A_Y=data['dataA_Y']
 

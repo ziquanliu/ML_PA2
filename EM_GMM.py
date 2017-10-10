@@ -12,5 +12,16 @@ X=np.array(A_X)
 l_type=['r.','b.','g.','y.']
 true_label=np.array(A_Y)
 
-clusters=clst.cluster(X,K,l_type,true_label)
-z=clusters.K_means()
+
+#initialize parameters
+dim=X.shape[0]
+num=X.shape[1]
+miu=np.zeros((dim,K))
+Sigma=[]
+for i in range(K):
+    miu[:,i]=X[:,int(num*np.random.rand())]
+    Sigma.append(np.eye(dim,dim)+np.random.rand(dim,dim))
+
+
+
+
