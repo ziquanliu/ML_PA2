@@ -10,6 +10,7 @@ def squ_Euc_dist(x, mean_value):
 
 def cal_gaussian(x,miu,Cov):
     exp_f=-(x-miu).transpose().dot(np.linalg.inv(Cov)).dot(x-miu)/2.0
+    #print 'x shape',(x-miu).shape
     return np.exp(exp_f)/np.sqrt(np.linalg.det(Cov))
 
 def gene_cov(dim):
@@ -92,7 +93,7 @@ class cluster(object):
                     min_distance = distance
                     ind = j
             z[i, ind] = 1
-        cluster_plt(self.line_type, z, self.X,self.K)
+        #cluster_plt(self.line_type, z, self.X,self.K)
 
         # iteration
         center_shift = 100
@@ -121,7 +122,7 @@ class cluster(object):
                         min_distance = distance
                         ind = j
                 z[i, ind] = 1
-            cluster_plt(self.line_type, z, self.X, self.K)
+            #cluster_plt(self.line_type, z, self.X, self.K)
         return z
 
 
@@ -151,11 +152,11 @@ class cluster(object):
             for i in range(num):
                 compnt = np.zeros((1, self.K))
                 for j in range(self.K):
-                    compnt[0, j] = pi[0, j] * cal_gaussian(self.X[:, i], miu[:, j], Sigma[j])
+                    compnt[0, j] = pi[0, j] * cal_gaussian(self.X[:, i].reshape(dim,1), miu[:, j].reshape(dim,1), Sigma[j])
                 for j in range(self.K):
                     z[i, j] = compnt[0, j] / np.sum(compnt)
             # print z
-            cluster_plt(self.line_type, z, self.X, self.K)
+            #cluster_plt(self.line_type, z, self.X, self.K)
             # print np.sum(z,0)
             N = np.sum(z, 0).reshape((1, self.K))
             for j in range(self.K):
