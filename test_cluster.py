@@ -13,4 +13,5 @@ l_type=['r.','b.','g.','y.']
 true_label=np.array(A_Y)
 
 clusters=clst.cluster(X,K,l_type,true_label)
-z=clusters.K_means()
+z_K_means=clusters.K_means()
+z_EM=clusters.EM_GMM()

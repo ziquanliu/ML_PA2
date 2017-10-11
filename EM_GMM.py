@@ -5,8 +5,8 @@ import cluster_cls as clst
 import copy
 
 data=scio.loadmat('cluster_data.mat')
-A_X=data['dataB_X']
-A_Y=data['dataB_Y']
+A_X=data['dataA_X']
+A_Y=data['dataA_Y']
 
 
 
