@@ -229,7 +229,8 @@ class cluster(object):
                 break
 
         z, K = ms_find_cluster(h, x_mean, self.X)
-        pickle.dump(z,open('data/h_'+str(h)+'_mean_shift_result.txt','wb'))
+        pickle.dump(z,open('data/h_'+str(h)+'_mean_shift_z.txt','wb'))
+        pickle.dump(x_mean, open('data/h_' + str(h) + '_mean_shift_mean.txt', 'wb'))
         print 'When h is ',h
         print 'Number of clusters is ', K
         if K==4:
