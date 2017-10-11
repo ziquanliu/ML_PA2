@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import copy
 import time
+import pickle
 
 
 def squ_Euc_dist(x, mean_value):
@@ -42,7 +43,7 @@ def cal_new_cov(j,N,z,X,miu_j):
         Sig_s+=z[i,j]*temp.dot(temp.transpose())
     return Sig_s/N
 
-def cluster_plt(line_type,z,X,K):
+def cluster_plt(line_type,z,X,K,h=0):
     dim = X.shape[0]
     num = X.shape[1]
     f1 = plt.figure()
@@ -61,9 +62,42 @@ def cluster_plt(line_type,z,X,K):
                 X_temp[:, ind_temp] = X[:, i]
                 ind_temp += 1
         plt.plot(X_temp[0, :], X_temp[1, :], line_type[j])
+    plt.savefig('image/cluster_result_h'+str(h)+'.eps',dpi=300)
     plt.show()
 
+def update_mean(x_old,DS,Sigma):
+    nominator=np.zeros(x_old.shape)
+    denom=0.0
+    num_DS=DS.shape[1]
+    dim=DS.shape[0]
+    for i in range(num_DS):
+        g_kern=cal_gaussian(DS[:,i].reshape(dim,1),x_old,Sigma)
+        nominator+=(DS[:,i].reshape(dim,1))*g_kern
+        denom+=g_kern
+    return nominator/denom
 
+
+def ms_find_cluster(h,X_Mean,X):
+    dim = X.shape[0]
+    num = X.shape[1]
+    cluster_cen = [X_Mean[:, 0].reshape((dim, 1))]
+    MIN_MEAN_DEV = h
+    num_cen = 1
+    for i in range(num):
+        temp = np.zeros((num_cen, 1))
+        for j in range(num_cen):
+            temp[j, 0] = np.sum(np.absolute(X_Mean[:, i].reshape((dim, 1)) - cluster_cen[j]))
+        if np.min(temp) > MIN_MEAN_DEV:
+            cluster_cen.append(X_Mean[:, i].reshape((dim, 1)))
+            num_cen += 1
+
+    z = np.zeros((num, num_cen))
+    for i in range(num):
+        temp = np.zeros((num_cen, 1))
+        for j in range(num_cen):
+            temp[j, 0] = np.sum(np.absolute(X_Mean[:, i].reshape((dim, 1)) - cluster_cen[j]))
+        z[i, np.argmin(temp)] = 1
+    return z,num_cen
 
 class cluster(object):
     def __init__(self,X,K,l_type,true_label):
@@ -171,6 +205,40 @@ class cluster(object):
             miu = miu_new.copy()
             Sigma = copy.copy(Sigma_new)
         return z
+
+    def mean_shift(self,h):
+        dim = self.X.shape[0]
+        num = self.X.shape[1]
+        Sigma = h ** 2 * np.eye(dim, dim)
+        shift_ind = np.ones((1, num))
+        MIN_RES = 10 ** -10
+        x_mean = self.X.copy()
+        iter_num = 0
+        while np.sum(shift_ind) > 0:
+            print 'iteration number', iter_num
+            iter_num += 1
+            for i in range(num):
+                if shift_ind[:, i] == 0: continue
+                x_old = x_mean[:, i].reshape(dim, 1)
+                x_new = update_mean(x_old, self.X, Sigma)
+                if np.sum(np.abs(x_old - x_new)) < MIN_RES:
+                    shift_ind[:, i] = 0
+                else:
+                    x_mean[:, i] = x_new.reshape((dim))
+            if iter_num > 10 ** 4:
+                break
+
+        z, K = ms_find_cluster(h, x_mean, self.X)
+        pickle.dump(z,open('data/h_'+str(h)+'_mean_shift_result.txt','wb'))
+        print 'When h is ',h
+        print 'Number of clusters is ', K
+        if K==4:
+            cluster_plt(self.line_type,z,self.X,K,h)
+        else:
+            print "Number of clusters is not equal to 4!"
+        return z
+
+
 
 
 
