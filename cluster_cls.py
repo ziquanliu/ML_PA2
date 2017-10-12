@@ -43,7 +43,7 @@ def cal_new_cov(j,N,z,X,miu_j):
         Sig_s+=z[i,j]*temp.dot(temp.transpose())
     return Sig_s/N
 
-def cluster_plt(line_type,z,X,K,h=0):
+def cluster_plt(line_type,z,X,K,x_mean,h=0):
     dim = X.shape[0]
     num = X.shape[1]
     f1 = plt.figure()
@@ -62,6 +62,7 @@ def cluster_plt(line_type,z,X,K,h=0):
                 X_temp[:, ind_temp] = X[:, i]
                 ind_temp += 1
         plt.plot(X_temp[0, :], X_temp[1, :], line_type[j])
+    plt.plot(x_mean[0, :], x_mean[1, :], 'kx')
     plt.savefig('image/cluster_result_h'+str(h)+'.eps',dpi=300)
     plt.show()
 
@@ -157,6 +158,7 @@ class cluster(object):
                         ind = j
                 z[i, ind] = 1
             #cluster_plt(self.line_type, z, self.X, self.K)
+        cluster_plt(self.line_type, z, self.X, self.K,miu)
         return z
 
 
@@ -204,6 +206,7 @@ class cluster(object):
             pi = pi_new.copy()
             miu = miu_new.copy()
             Sigma = copy.copy(Sigma_new)
+        cluster_plt(self.line_type, z, self.X, self.K, miu)
         return z
 
     def mean_shift(self,h):
@@ -229,12 +232,13 @@ class cluster(object):
                 break
 
         z, K = ms_find_cluster(h, x_mean, self.X)
-        pickle.dump(z,open('data/h_'+str(h)+'_mean_shift_z.txt','wb'))
-        pickle.dump(x_mean, open('data/h_' + str(h) + '_mean_shift_mean.txt', 'wb'))
+
         print 'When h is ',h
         print 'Number of clusters is ', K
         if K==4:
-            cluster_plt(self.line_type,z,self.X,K,h)
+            cluster_plt(self.line_type,z,self.X,K,x_mean,h)
+            pickle.dump(z, open('data/h_' + str(h) + '_mean_shift_z.txt', 'wb'))
+            pickle.dump(x_mean, open('data/h_' + str(h) + '_mean_shift_mean.txt', 'wb'))
         else:
             print "Number of clusters is not equal to 4!"
         return z

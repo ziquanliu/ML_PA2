@@ -33,5 +33,5 @@ for j in range(K):
             X_temp[:, ind_temp] = X[:, i]
             ind_temp += 1
     plt.plot(X_temp[0, :], X_temp[1, :], line_type[j])
-plt.plot(x_mean[0,:],x_mean[1,:],'k+')
+plt.plot(x_mean[0,:],x_mean[1,:],'kx')
 plt.show()
