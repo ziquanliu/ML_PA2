@@ -16,5 +16,5 @@ clusters=clst.cluster(X,K,l_type,true_label)
 h=np.zeros((1000,1))
 for i in range(1000):
     h[i,0]=1+float(i)/1000.0
-for i in range(1000)
+for i in range(1000):
     z_ms=clusters.mean_shift(h[i,0])

@@ -43,7 +43,7 @@ def cal_new_cov(j,N,z,X,miu_j):
         Sig_s+=z[i,j]*temp.dot(temp.transpose())
     return Sig_s/N
 
-def cluster_plt(line_type,z,X,K,x_mean,h=0):
+def cluster_plt(line_type,z,X,K,name,x_mean,h=0):
     dim = X.shape[0]
     num = X.shape[1]
     f1 = plt.figure()
@@ -63,8 +63,14 @@ def cluster_plt(line_type,z,X,K,x_mean,h=0):
                 ind_temp += 1
         plt.plot(X_temp[0, :], X_temp[1, :], line_type[j])
     plt.plot(x_mean[0, :], x_mean[1, :], 'kx')
-    plt.savefig('image/cluster_result_h'+str(h)+'.eps',dpi=300)
+    plt.title(name)
+    plt.savefig(name+'/image/cluster_result_h'+str(h)+'.eps',dpi=300)
     plt.show()
+
+def plt_save(line_type,z,X,K,name,x_mean=None,h=0):
+    cluster_plt(line_type,z,X,K,name,x_mean,h)
+    pickle.dump(z,open(name+'/data/'+'cluster_result_h'+str(h)+'.txt','wb'))
+    pickle.dump(z, open(name+'/data/' +'cluster_mean_h' + str(h) + '.txt', 'wb'))
 
 def update_mean(x_old,DS,Sigma):
     nominator=np.zeros(x_old.shape)
@@ -98,7 +104,10 @@ def ms_find_cluster(h,X_Mean,X):
         for j in range(num_cen):
             temp[j, 0] = np.sum(np.absolute(X_Mean[:, i].reshape((dim, 1)) - cluster_cen[j]))
         z[i, np.argmin(temp)] = 1
-    return z,num_cen
+    miu=np.zeros((dim,num_cen))
+    for i in range(num_cen):
+        miu[:,i]=cluster_cen[i].reshape((dim,))
+    return z,num_cen,miu
 
 class cluster(object):
     def __init__(self,X,K,l_type,true_label):
@@ -145,7 +154,7 @@ class cluster(object):
                     denom += float(z[i, j]) * self.X[:, i]
                 miu_new[:, j] = denom / float(np.sum(z[:, j]))
             center_shift = np.sum(np.absolute(miu_new - miu))
-            print 'center shift:', center_shift
+            #print 'center shift:', center_shift
             miu = miu_new.copy()
             z = np.zeros((num, self.K))
             for i in range(num):
@@ -158,8 +167,8 @@ class cluster(object):
                         ind = j
                 z[i, ind] = 1
             #cluster_plt(self.line_type, z, self.X, self.K)
-        cluster_plt(self.line_type, z, self.X, self.K,miu)
-        return z
+        #cluster_plt(self.line_type, z, self.X, self.K,miu)
+        return z,miu
 
 
     def EM_GMM(self):
@@ -206,8 +215,13 @@ class cluster(object):
             pi = pi_new.copy()
             miu = miu_new.copy()
             Sigma = copy.copy(Sigma_new)
-        cluster_plt(self.line_type, z, self.X, self.K, miu)
-        return z
+        #cluster_plt(self.line_type, z, self.X, self.K, miu)
+        z_t = z.copy()
+        for i in range(num):
+            max_index = np.argmax(z_t[i, :])
+            z_t[i, :] = np.zeros((1, self.K))
+            z_t[i, max_index] = 1
+        return z_t,miu
 
     def mean_shift(self,h):
         dim = self.X.shape[0]
@@ -231,17 +245,18 @@ class cluster(object):
             if iter_num > 10 ** 4:
                 break
 
-        z, K = ms_find_cluster(h, x_mean, self.X)
+        z, K, clst_mean= ms_find_cluster(h, x_mean, self.X)
 
         print 'When h is ',h
         print 'Number of clusters is ', K
         if K==4:
-            cluster_plt(self.line_type,z,self.X,K,x_mean,h)
-            pickle.dump(z, open('data/h_' + str(h) + '_mean_shift_z.txt', 'wb'))
-            pickle.dump(x_mean, open('data/h_' + str(h) + '_mean_shift_mean.txt', 'wb'))
+            #cluster_plt(self.line_type,z,self.X,K,x_mean,h)
+            #pickle.dump(z, open('data/h_' + str(h) + '_mean_shift_z.txt', 'wb'))
+            #pickle.dump(x_mean, open('data/h_' + str(h) + '_mean_shift_mean.txt', 'wb'))
+            a=~0
         else:
             print "Number of clusters is not equal to 4!"
-        return z
+        return z,clst_mean
 
 
 
