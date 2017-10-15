@@ -5,6 +5,13 @@ import time
 import pickle
 
 
+def k_mean_dist(x,mean_value,lambda_km):
+    left=np.sum(np.square(x[0:2]-mean_value[0:2]))
+    right=np.sum(np.square(x[2:4]-mean_value[2:4]))
+    return left+lambda_km*right
+
+
+
 def squ_Euc_dist(x, mean_value):
     return np.sum(np.square(x - mean_value))
 
@@ -14,6 +21,16 @@ def cal_gaussian(x,miu,Cov):
     #print 'x shape',(x-miu).shape
     return np.exp(exp_f)/np.sqrt(np.linalg.det(Cov))
 
+def cal_log_gaussian(x,miu,Cov):
+    L=np.linalg.cholesky(Cov)
+    left=-np.sum(np.log(np.diagonal(L)))
+    right=-(x-miu).transpose().dot(np.linalg.inv(Cov)).dot(x-miu)/2.0
+    return left+right
+
+
+
+
+
 def gene_cov(dim):
     cov=np.zeros((dim,dim))
     for i in range(dim):
@@ -21,7 +38,7 @@ def gene_cov(dim):
             if i==j:
                 cov[i,j]=5.0+np.random.rand()
             else:
-                cov[i,j]=-5.0+np.random.rand()*10
+                cov[i,j]=0
                 cov[j,i]=cov[i,j]
     return cov
 
@@ -39,7 +56,7 @@ def cal_new_cov(j,N,z,X,miu_j):
     sam_dim=X.shape[0]
     Sig_s=np.zeros((sam_dim,sam_dim))
     for i in range(sam_num):
-        temp=(X[:,i]-miu_j).reshape(2,1)
+        temp=(X[:,i]-miu_j).reshape(sam_dim,1)
         Sig_s+=z[i,j]*temp.dot(temp.transpose())
     return Sig_s/N
 
@@ -197,9 +214,14 @@ class cluster(object):
             for i in range(num):
                 compnt = np.zeros((1, self.K))
                 for j in range(self.K):
-                    compnt[0, j] = pi[0, j] * cal_gaussian(self.X[:, i].reshape(dim,1), miu[:, j].reshape(dim,1), Sigma[j])
+                    compnt[0, j] = cal_log_gaussian(self.X[:, i].reshape(dim,1), miu[:, j].reshape(dim,1), Sigma[j])
+
+                l_star=np.max(compnt)
+                compnt_new=compnt-l_star
+                l=l_star+np.log(np.sum(np.exp(compnt_new)))
                 for j in range(self.K):
-                    z[i, j] = compnt[0, j] / np.sum(compnt)
+                    gama=compnt[0,j]-l
+                    z[i,j]=np.exp(gama)
             # print z
             #cluster_plt(self.line_type, z, self.X, self.K)
             # print np.sum(z,0)
@@ -221,7 +243,11 @@ class cluster(object):
             max_index = np.argmax(z_t[i, :])
             z_t[i, :] = np.zeros((1, self.K))
             z_t[i, max_index] = 1
-        return z_t,miu
+        Y=np.zeros((num,1))
+        for i in range(num):
+            Y[i,0]=np.argmax(z[i,:])+1
+        print 'This is cluster EM-GMM'
+        return Y,z_t,miu
 
     def mean_shift(self,h):
         dim = self.X.shape[0]
@@ -258,6 +284,69 @@ class cluster(object):
             print "Number of clusters is not equal to 4!"
         return z,clst_mean
 
+
+
+
+class imgseg_cluster(cluster):
+    def __init__(self,X,K,l_type,true_label,lambdakm,hp,hc):
+        cluster.__init__(self,X,K,l_type,true_label)
+        self.lambda_km=lambdakm
+        self.h_p=hp
+        self.h_c=hc
+
+
+    def K_means(self):
+        dim = self.X.shape[0]
+        num = self.X.shape[1]
+        miu = np.zeros((dim, self.K))
+        for i in range(self.K):
+            miu[:, i] = self.X[:, int(num * np.random.rand())]
+
+        # initialize z_ij
+        z = np.zeros((num, self.K))
+        for i in range(num):
+            min_distance = k_mean_dist(self.X[:, i], miu[:, 0],self.lambda_km)
+            ind = 0
+            for j in range(1, self.K):
+                distance = k_mean_dist(self.X[:, i], miu[:, j],self.lambda_km)
+                if distance < min_distance:
+                    min_distance = distance
+                    ind = j
+            z[i, ind] = 1
+        # cluster_plt(self.line_type, z, self.X,self.K)
+
+        # iteration
+        center_shift = 100
+        min_shift = 10 ** -10
+        iter_n = 0
+        miu_new = np.zeros((dim, self.K))
+
+        while center_shift > min_shift:
+            print 'iteration number', iter_n
+            iter_n += 1
+            for j in range(self.K):
+                denom = 0
+                for i in range(num):
+                    denom += float(z[i, j]) * self.X[:, i]
+                miu_new[:, j] = denom / float(np.sum(z[:, j]))
+            center_shift = np.sum(np.absolute(miu_new - miu))
+            # print 'center shift:', center_shift
+            miu = miu_new.copy()
+            z = np.zeros((num, self.K))
+            for i in range(num):
+                min_distance = squ_Euc_dist(self.X[:, i], miu[:, 0])
+                ind = 0
+                for j in range(1, self.K):
+                    distance = squ_Euc_dist(self.X[:, i], miu[:, j])
+                    if distance < min_distance:
+                        min_distance = distance
+                        ind = j
+                z[i, ind] = 1
+        Y=np.zeros((num,1))
+        for i in range(num):
+            Y[i,0]=np.argmax(z[i,:])+1
+        print 'This is imgseg k-means'
+        return Y, miu
 
 
 
