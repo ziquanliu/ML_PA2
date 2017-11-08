@@ -79,12 +79,13 @@ def cluster_plt(line_type,z,X,K,name,x_mean,h=0):
                 X_temp[:, ind_temp] = X[:, i]
                 ind_temp += 1
         plt.plot(X_temp[0, :], X_temp[1, :], line_type[j])
-    plt.plot(x_mean[0, :], x_mean[1, :], 'kx')
+    #plt.plot(x_mean[0, :], x_mean[1, :], 'kx')
     plt.title(name)
     plt.savefig(name+'/image/cluster_result_h'+str(h)+'.eps',dpi=300)
     plt.show()
 
-def plt_save(line_type,z,X,K,name,x_mean=None,h=0):
+def plt_save(line_type,z,X,name,x_mean=None,h=0):
+    K=z.shape[1]
     cluster_plt(line_type,z,X,K,name,x_mean,h)
     pickle.dump(z,open(name+'/data/'+'cluster_result_h'+str(h)+'.txt','wb'))
     pickle.dump(z, open(name+'/data/' +'cluster_mean_h' + str(h) + '.txt', 'wb'))
@@ -125,6 +126,43 @@ def ms_find_cluster(h,X_Mean,X):
     for i in range(num_cen):
         miu[:,i]=cluster_cen[i].reshape((dim,))
     return z,num_cen,miu
+
+def ms_find_cluster_n(h,X_Mean,X):
+    dim = X.shape[0]
+    num = X.shape[1]
+    if isinstance(h,np.ndarray):
+        MIN_MEAN_DEV = np.sum(h)/2.0
+    else:
+        MIN_MEAN_DEV=h
+    num_mean=num
+    num_cen = 0
+    cls_index=[]
+    mean=X_Mean.copy()
+    miu_l=[]
+    for i in range(num_mean):
+        if mean[int(dim * np.random.rand()),i] == 0 and mean[int(dim * np.random.rand()),i] == 0:
+            continue
+        mean_l_ind=[i]
+        miu=mean[:,i].reshape((dim,1))
+        for j in range(num_mean):
+            if i==j: continue
+            if mean[int(dim*np.random.rand()),j]==0 and mean[int(dim*np.random.rand()),j]==0:
+                continue
+            if np.sum(np.absolute(mean[:, j].reshape((dim, 1)) - mean[:, i].reshape((dim, 1))))<MIN_MEAN_DEV:
+                mean_l_ind.append(j)
+                mean[:,j]=np.zeros((dim))
+                miu+=mean[:, j].reshape((dim, 1))
+        miu_l.append(miu/float(len(mean_l_ind)))
+        cls_index.append(mean_l_ind)
+        num_cen+=1
+    z = np.zeros((num, num_cen))
+    print len(cls_index)
+    print num_cen
+    for i in range(num_cen):
+        for j in range(len(cls_index[i])):
+            z[cls_index[i][j],i]=1
+    return z,num_cen,miu_l
+
 
 class cluster(object):
     def __init__(self,X,K,l_type,true_label):
@@ -214,7 +252,7 @@ class cluster(object):
             for i in range(num):
                 compnt = np.zeros((1, self.K))
                 for j in range(self.K):
-                    compnt[0, j] = cal_log_gaussian(self.X[:, i].reshape(dim,1), miu[:, j].reshape(dim,1), Sigma[j])
+                    compnt[0, j] = np.log(pi[0,j])+cal_log_gaussian(self.X[:, i].reshape(dim,1), miu[:, j].reshape(dim,1), Sigma[j])
 
                 l_star=np.max(compnt)
                 compnt_new=compnt-l_star
@@ -270,8 +308,9 @@ class cluster(object):
                     x_mean[:, i] = x_new.reshape((dim))
             if iter_num > 10 ** 4:
                 break
+        #print x_mean
 
-        z, K, clst_mean= ms_find_cluster(h, x_mean, self.X)
+        z, K, clst_mean= ms_find_cluster_n(h, x_mean, self.X)
 
         print 'When h is ',h
         print 'Number of clusters is ', K
